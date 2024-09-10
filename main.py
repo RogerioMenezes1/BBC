@@ -62,32 +62,3 @@ def get_clean_content(url):
 def raiz():
     clean_content = get_clean_content('https://www.bbc.com/')
     return clean_content
-
-# Rota para coletar e armazenar o conteúdo no BigQuery
-@app.get("/collect")
-def collect():
-    clean_content = get_clean_content('https://www.bbc.com/')
-    article = Article(title='BBC News', content=clean_content)
-
-    # Armazenar no BigQuery (bônus)
-    client = bigquery.Client()
-    table_ref = client.dataset('news').table('articles')
-    job_config = bigquery.LoadJobConfig()
-    job_config.source_format = bigquery.SourceFormat.NEWLINE_DELIMITED_JSON
-    job = client.load_table_from_json([article.dict()], table_ref, job_config=job_config)
-    job.result()
-
-    return {"message": "Artigo coletado e armazenado com sucesso!"}
-
-# Rota para buscar artigos via API
-@app.get("/search")
-def search(query: str):
-    client = bigquery.Client()
-    query_job = client.query(f"SELECT * FROM `news.articles` WHERE content LIKE '%{query}%'")
-    results = query_job.result()
-
-    articles = []
-    for row in results:
-        articles.append(Article(title=row['title'], content=row['content']))
-    
-    return articles
